@@ -213,7 +213,7 @@
 
         // Initialize Firebase with global configs
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const __firebase_config = {
+        const firebaseConfig = {
                                   apiKey: "AIzaSyDwY_s1U2EPnZJcJVYozd8ykGva6SjbJ5A",
                                   authDomain: "timesheetapp-vj.firebaseapp.com",
                                   projectId: "timesheetapp-vj",
@@ -222,7 +222,7 @@
                                   appId: "1:141050414099:web:efd3e76e6ff22c34a3abe6",
                                   measurementId: "G-GDN3M7J2KX"
                                 };
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        // const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
                     // You will also need to handle user authentication yourself
             // For this app, anonymous sign-in is a good option for simplicity
             const initialAuthToken = null; // This is not needed for anonymous auth
