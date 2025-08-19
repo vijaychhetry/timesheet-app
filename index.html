@@ -192,11 +192,24 @@
       </div>
     </div>
 
+    <!-- Clear All Confirmation Modal -->
+    <div id="clear-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn clear-modal-close">&times;</span>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Are you sure?</h3>
+            <p class="text-gray-700 mb-6">This will permanently delete all timesheet entries. This action cannot be undone.</p>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-clear-btn" class="px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+                <button id="confirm-clear-btn" class="px-4 py-2 bg-rose-600 text-white font-medium rounded-lg hover:bg-rose-700 transition-colors">Clear All</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Initialize Firebase with global configs
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -213,7 +226,11 @@
         const timesheetForm = document.getElementById('timesheet-form');
         const generateBtn = document.getElementById('generate-btn');
         const sheetsModal = document.getElementById('sheets-modal');
-        const closeBtn = document.querySelector('.close-btn');
+        const clearModal = document.getElementById('clear-modal');
+        const closeBtnSheets = document.querySelector('.modal #sheets-modal .close-btn');
+        const closeBtnClear = document.querySelector('.modal #clear-modal .close-btn');
+        const confirmClearBtn = document.getElementById('confirm-clear-btn');
+        const cancelClearBtn = document.getElementById('cancel-clear-btn');
 
         let unsubscribeFromFirestore = null;
 
@@ -224,19 +241,25 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Authenticate the user
+                // Authenticate the user and set up the listener for auth state changes
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
 
-                userId = auth.currentUser.uid;
-                userIdEl.textContent = userId;
-                console.log("Firebase initialized and user authenticated:", userId);
-
-                // Start listening for data changes
-                setupFirestoreListener();
+                // Use onAuthStateChanged to ensure the user is fully authenticated before proceeding
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userIdEl.textContent = userId;
+                        console.log("Firebase authenticated. User ID:", userId);
+                        setupFirestoreListener();
+                    } else {
+                        console.error("User is not authenticated.");
+                        userIdEl.textContent = "Auth Error!";
+                    }
+                });
 
             } catch (error) {
                 console.error("Error during Firebase initialization or authentication:", error);
@@ -246,6 +269,9 @@
 
         // --- Firestore Listener Setup ---
         const setupFirestoreListener = () => {
+            if (unsubscribeFromFirestore) {
+                unsubscribeFromFirestore(); // Detach any existing listener
+            }
             const timesheetRef = collection(db, `artifacts/${appId}/users/${userId}/timesheet`);
             
             // onSnapshot sets up a real-time listener to the collection
@@ -285,6 +311,22 @@
                 await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/timesheet`, docId));
             } catch (error) {
                 console.error("Error deleting document from Firestore:", error);
+            }
+        };
+
+        const clearAllEntriesFromFirestore = async () => {
+            if (!db || !userId) return;
+            try {
+                const timesheetRef = collection(db, `artifacts/${appId}/users/${userId}/timesheet`);
+                const snapshot = await getDocs(timesheetRef);
+                const deletePromises = [];
+                snapshot.docs.forEach(d => {
+                    deletePromises.push(deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/timesheet`, d.id)));
+                });
+                await Promise.all(deletePromises);
+                console.log("All entries cleared successfully.");
+            } catch (error) {
+                console.error("Error clearing all entries:", error);
             }
         };
         
@@ -427,12 +469,20 @@
                 }
             });
             
+            // Clear All button logic
             clearAllBtn.addEventListener('click', () => {
-                // To clear all entries, you can delete them individually using the trash can icons.
-                // This is a placeholder for a future 'Clear All' functionality.
-                // For now, the console.log serves as a user-facing message.
-                console.log("To clear all entries, you can delete them individually using the trash can icons.");
+                clearModal.style.display = 'flex';
             });
+
+            confirmClearBtn.addEventListener('click', () => {
+                clearAllEntriesFromFirestore();
+                clearModal.style.display = 'none';
+            });
+
+            cancelClearBtn.addEventListener('click', () => {
+                clearModal.style.display = 'none';
+            });
+
             
             exportCsvBtn.addEventListener('click', exportToCsv);
             
@@ -442,13 +492,20 @@
             });
 
             // Hide the sheets modal
-            closeBtn.addEventListener('click', () => {
-                sheetsModal.style.display = 'none';
-            });
+            const hideModal = (modal) => {
+                modal.style.display = 'none';
+            };
+
+            document.querySelector('#sheets-modal .close-btn').addEventListener('click', () => hideModal(sheetsModal));
+            document.querySelector('#clear-modal .close-btn').addEventListener('click', () => hideModal(clearModal));
+
 
             window.addEventListener('click', (event) => {
                 if (event.target == sheetsModal) {
-                    sheetsModal.style.display = 'none';
+                    hideModal(sheetsModal);
+                }
+                if (event.target == clearModal) {
+                    hideModal(clearModal);
                 }
             });
 
