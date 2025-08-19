@@ -211,26 +211,22 @@
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Initialize Firebase with global configs
+        // Initialize Firebase with global configs provided by the Canvas environment.
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = {
-                                  apiKey: "AIzaSyDwY_s1U2EPnZJcJVYozd8ykGva6SjbJ5A",
-                                  authDomain: "timesheetapp-vj.firebaseapp.com",
-                                  projectId: "timesheetapp-vj",
-                                  storageBucket: "timesheetapp-vj.firebasestorage.app",
-                                  messagingSenderId: "141050414099",
-                                  appId: "1:141050414099:web:efd3e76e6ff22c34a3abe6",
-                                  measurementId: "G-GDN3M7J2KX"
-                                };
-        // const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-                    // You will also need to handle user authentication yourself
-            // For this app, anonymous sign-in is a good option for simplicity
-            const initialAuthToken = null; // This is not needed for anonymous auth
-            
-            let db, auth;
-            let userId = null;
-            let entries = [];
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDwY_s1U2EPnZJcJVYozd8ykGva6SjbJ5A",
+            authDomain: "timesheetapp-vj.firebaseapp.com",
+            projectId: "timesheetapp-vj",
+            storageBucket: "timesheetapp-vj.firebasestorage.app",
+            messagingSenderId: "141050414099",
+            appId: "1:141050414099:web:efd3e76e6ff22c34a3abe6",
+            measurementId: "G-GDN3M7J2KX"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
+        let db, auth;
+        let userId = null;
+        let entries = [];
 
         const userIdEl = document.getElementById('user-id');
         const exportCsvBtn = document.getElementById('export-csv-btn');
@@ -614,7 +610,7 @@
                         </div>
                         <button class="add-generated-task-btn px-4 py-2 bg-indigo-500 text-white font-medium rounded-lg hover:bg-indigo-600 transition-colors shadow-sm whitespace-nowrap" 
                             data-task-name="${task.taskName}"
-                            data-task-type="${task.type}"
+                            data-task-type="${task.taskType}"
                             data-duration-minutes="${task.durationMinutes}">
                             Add to Timesheet
                         </button>
